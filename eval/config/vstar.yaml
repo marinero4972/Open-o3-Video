@@ -1,0 +1,5 @@
+# model_kwargs.yaml
+temperature: 0.0
+max_tokens: 2048
+video_max_pixels: 2097152
+video_max_frames: 16

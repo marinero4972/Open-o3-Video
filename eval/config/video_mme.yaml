@@ -1,0 +1,5 @@
+# model_kwargs.yaml
+temperature: 0.0
+max_tokens: 8192
+video_max_pixels: 262144 # 512*512= 262144
+video_max_frames: 64
