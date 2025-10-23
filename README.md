@@ -83,14 +83,14 @@ bash ./src/scripts/run_grpo_video.sh
 
 ## Evaluation:
 
-Evaluate benchmarks:
+Evaluate on benchmarks:
 
 ```bash
 cd eval
 bash ./scripts/eval_all.sh
 ```
 
-Infernce on a single example:
+Infernce on examples:
 
 ```bash
 cd eval
