@@ -1,0 +1,9 @@
+*.log
+*.out
+*.txt
+*.csv
+*.xlsx
+*.egg-info/
+**/__pycache__/
+src/r1-v/wandb/
+.DS_Store
