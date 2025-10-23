@@ -15,7 +15,7 @@ and
 [Zhuochen Wang](https://scholar.google.com/citations?hl=en&user=RDvwXDsAAAAJ),
 
 
-[[📖 Paper](https://arxiv.org/abs/2510.XXXXX)] | [[🎥 Introduction](https://youtu.be/gymaTVRy0JY)] | [[🤗 Model](https://huggingface.co/marinero4972/Open-o3-Video/tree/main)] | [[🤗 Data](https://huggingface.co/datasets/marinero4972/Open-o3-Video/tree/main)]
+[[📖 Paper](https://arxiv.org/abs/2510.XXXXX)] | [[🌟 Project Page](https://marinero4972.github.io/projects/Open-o3-Video/)] | [[🎥 Introduction](https://youtu.be/gymaTVRy0JY)] | [[🤗 Model](https://huggingface.co/marinero4972/Open-o3-Video/tree/main)] | [[🤗 Data](https://huggingface.co/datasets/marinero4972/Open-o3-Video/tree/main)]
 
 
 **TL; DR**: Open-o3 Video integrates explicit spatio-temporal evidence into video reasoning through curated STGR datasets and a two-stage SFT–RL training strategy, achieving state-of-the-art results on V-STAR and delivering verifiable, reliable reasoning for video understanding.
