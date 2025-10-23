@@ -8,8 +8,8 @@ from qwen_vl_utils import process_vision_info
 model_path = "..."
 
 # Set video path and question
-video_path_list = ["..."]
-question_list = ["..."]
+video_path_list = ["./example_video.mp4" for _ in range(2)]
+question_list = ["What is the color of the bowling ball?", "What is the first scene about?"]
 
 # Initialize the LLM
 llm = LLM(
@@ -17,11 +17,11 @@ llm = LLM(
     tensor_parallel_size=1,
     max_model_len=81920,
     gpu_memory_utilization=0.7,
-    limit_mm_per_prompt={"video": 1, "image": 32},
+    limit_mm_per_prompt={"video": 1, "image": 16},
 )
 
 sampling_params = SamplingParams(
-    temperature=0.1,
+    temperature=0.7,
     top_p=0.001,
     repetition_penalty=1.05,
     max_tokens=2048,
@@ -50,7 +50,7 @@ for idx in range(len(question_list)):
                 {
                     "type": "video",
                     "video": video_path,
-                    "nframes": 32      # max frame number
+                    "nframes": 16      # max frame number
                 },
                 {
                     "type": "text",
@@ -71,8 +71,6 @@ for idx in range(len(question_list)):
         frame_prompt += f"Frame {i+1} at {round(i / video_kwargs['fps'][0],1)} second: <|vision_start|><|image_pad|><|vision_end|>\n"    
     prompt = prompt.replace("<|vision_start|><|video_pad|><|vision_end|>", frame_prompt)
 
-    print(prompt)
-    print(video_inputs[0].shape)
 
     llm_inputs = [{
         "prompt": prompt,
