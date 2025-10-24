@@ -15,7 +15,7 @@ and
 [Zhuochen Wang](https://scholar.google.com/citations?hl=en&user=RDvwXDsAAAAJ),
 
 
-[[📖 Paper](https://arxiv.org/abs/2510.XXXXX)] | [[🌟 Project Page](https://marinero4972.github.io/projects/Open-o3-Video/)] | [[🎥 Introduction](https://youtu.be/gymaTVRy0JY)] | [[🤗 Model](https://huggingface.co/marinero4972/Open-o3-Video/tree/main)] | [[🤗 Data](https://huggingface.co/datasets/marinero4972/Open-o3-Video/tree/main)]
+[[📖 Paper](https://arxiv.org/pdf/2510.20579)] | [[🌟 Project Page](https://marinero4972.github.io/projects/Open-o3-Video/)] | [[🎥 Introduction](https://youtu.be/gymaTVRy0JY)] | [[🤗 Model](https://huggingface.co/marinero4972/Open-o3-Video/tree/main)] | [[🤗 Data](https://huggingface.co/datasets/marinero4972/Open-o3-Video/tree/main)]
 
 
 **TL; DR**: Open-o3 Video integrates explicit spatio-temporal evidence into video reasoning through curated STGR datasets and a two-stage SFT–RL training strategy, achieving state-of-the-art results on V-STAR and delivering verifiable, reliable reasoning for video understanding.
@@ -102,6 +102,19 @@ python ./inference_example.py
 
 This project is licensed under the [Apache-2.0 License](LICENSE).
 
+
+# Citation
+
+If you use our work or our implementation in this repo, or find them helpful, please consider giving a citation in the following format.
+
+```
+@article{meng2025open-o3,
+  title={Open-o3 Video: Grounded Video Reasoning with Explicit Spatio-Temporal Evidence}, 
+  author={Jiahao Meng, Xiangtai Li, Haochen Wang, Yue Tan, Tao Zhang, Lingdong Kong, Yunhai Tong, Anran Wang, Zhiyang Teng, Yujing Wang, Zhuochen Wang},
+  journal={arXiv preprint arXiv:2510.20579},
+  year={2025}
+}
+```
 
 # Acknowledgements
 
