@@ -18,7 +18,7 @@ and
 [[📖 Paper](https://arxiv.org/pdf/2510.20579)] | [[🌟 Project Page](https://marinero4972.github.io/projects/Open-o3-Video/)] | [[🎥 Introduction](https://youtu.be/gymaTVRy0JY)] | [[🤗 Model](https://huggingface.co/marinero4972/Open-o3-Video/tree/main)] | [[🤗 Data](https://huggingface.co/datasets/marinero4972/Open-o3-Video/tree/main)]
 
 
-**TL; DR**: Open-o3 Video integrates explicit spatio-temporal evidence into video reasoning through curated STGR datasets and a two-stage SFT–RL training strategy, achieving state-of-the-art results on V-STAR and delivering verifiable, reliable reasoning for video understanding.
+**TL; DR**: Open-o3 Video integrates explicit spatio-temporal evidence (key timestamps and bounding boxes) into video reasoning through curated STGR dataset and a two-stage SFT–RL training strategy, achieving state-of-the-art results on V-STAR and delivering verifiable, reliable reasoning for video understanding.
 
 ![](./assets/teaser.png)
 
