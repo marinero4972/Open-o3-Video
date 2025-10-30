@@ -8,7 +8,7 @@ EXP_NAME="sft"
 OUT_DIR="/path/to/ckpts/${EXP_NAME}"
 
 DATA_ROOT=$(python -c "from configs.data_root import DATA_ROOT; print(DATA_ROOT)")
-mkdir -p ./train_logs
+# mkdir -p ./train_logs
 
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 torchrun --nproc_per_node="8" \
     --nnodes="1" \
