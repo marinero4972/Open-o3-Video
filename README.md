@@ -108,9 +108,9 @@ This project is licensed under the [Apache-2.0 License](LICENSE).
 If you use our work or our implementation in this repo, or find them helpful, please consider giving a citation in the following format.
 
 ```
-@article{meng2025open-o3,
+@article{meng2025openo3,
   title={Open-o3 Video: Grounded Video Reasoning with Explicit Spatio-Temporal Evidence}, 
-  author={Jiahao Meng, Xiangtai Li, Haochen Wang, Yue Tan, Tao Zhang, Lingdong Kong, Yunhai Tong, Anran Wang, Zhiyang Teng, Yujing Wang, Zhuochen Wang},
+  author={Meng, Jiahao and Li, Xiangtai and Wang, Haochen and Tan, Yue and Zhang, Tao and Kong, Lingdong  and Tong, Yunhai and Wang, Anran and Teng, Zhiyang and Wang, Yujing and Wang, Zhuochen},
   journal={arXiv preprint arXiv:2510.20579},
   year={2025}
 }

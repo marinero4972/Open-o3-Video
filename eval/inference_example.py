@@ -5,7 +5,7 @@ from transformers import AutoProcessor, AutoTokenizer
 from qwen_vl_utils import process_vision_info
 
 # Set model path
-model_path = "..."
+model_path = "/mnt/bn/strategy-mllm-train/user/jiahao/ckpts/gspo_mix_37k_1014"
 
 # Set video path and question
 video_path_list = ["./example_video.mp4" for _ in range(2)]
