@@ -32,7 +32,7 @@ Stage 2: Reinforcement learning with Group Sequence Policy Optimization stabiliz
 
 ![](./assets/model.png)
 
-# 🆕 Updates
+# Updates
 
 - 2025.11, Improved Results with Qwen3-VL-8B: We have trained Open-o3 Video using **Qwen3-VL-8B** as the base model. On the **V-STAR benchmark**, our latest model achieves: **mAM:35.5% and mLGM: 49.0%**. This result establishes a new state-of-the-art in spatio-temporal grounded video reasoning.
 
@@ -104,14 +104,14 @@ cd eval
 python ./inference_example.py
 ```
 
-## 📊 Main Results
+# 📊 Main Results
 
 <img src="./assets/vstar.png" alt="Performance on V-STAR benchmark" width="100%">
 
 Performance on the **V-STAR benchmark**, which evaluates spatio-temporal reasoning across three dimensions. Chain1 denotes *what–when–where*, while Chain2 corresponds to *what–where–when*. **Open-o3 Video** sets a new state-of-the-art with mAM improved by **+14.4%**, and mLGM by **+24.2%**, surpassing **GPT-4o** and **Gemini-2-Flash**. 
 
 
-## 🎬 Demos
+# 🎬 Demos
 
 Each pair shows the input video(left) and the corresponding spatio-temporal grounded reasoning visualization(right). Our model not only provides textual reasoning but also highlights **when** (temporal evidence) and **where** (spatial evidence) the key events occur, offering **explicit, interpretable visual traces** that ground the reasoning process.
 
