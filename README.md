@@ -32,6 +32,13 @@ Stage 2: Reinforcement learning with Group Sequence Policy Optimization stabiliz
 
 ![](./assets/model.png)
 
+# 🆕 Updates
+
+- 2025.11, Improved Results with Qwen3-VL-8B: We have trained Open-o3 Video using **Qwen3-VL-8B** as the base model. On the **V-STAR benchmark**, our latest model achieves: **mAM:35.5% and mLGM: 49.0%**. This result establishes a new state-of-the-art in spatio-temporal grounded video reasoning.
+
+- 2025.11, Media Coverage: Our work was recently featured by **量子位(QbitAI)**. 👉 [Read the article here](https://mp.weixin.qq.com/s/ssdSYXxi8RAOuIVW33lWIg)
+
+
 # Quick Start
 
 ## Environment setup:
@@ -96,6 +103,95 @@ Infernce on examples:
 cd eval
 python ./inference_example.py
 ```
+
+## 📊 Main Results
+
+<img src="./assets/vstar.png" alt="Performance on V-STAR benchmark" width="100%">
+
+Performance on the **V-STAR benchmark**, which evaluates spatio-temporal reasoning across three dimensions. Chain1 denotes *what–when–where*, while Chain2 corresponds to *what–where–when*. **Open-o3 Video** sets a new state-of-the-art with mAM improved by **+14.4%**, and mLGM by **+24.2%**, surpassing **GPT-4o** and **Gemini-2-Flash**. 
+
+
+## 🎬 Demos
+
+Each pair shows the input video(left) and the corresponding spatio-temporal grounded reasoning visualization(right). Our model not only provides textual reasoning but also highlights **when** (temporal evidence) and **where** (spatial evidence) the key events occur, offering **explicit, interpretable visual traces** that ground the reasoning process.
+
+---
+
+<table>
+<tr>
+<td width="50%">
+<video src="./assets/s08e18_seg02_clip_03.mp4" controls autoplay loop muted playsinline width="100%"></video>
+</td>
+<td width="50%">
+<img src="./assets/demo_vstar_s08e18_seg02_clip_03.gif" width="100%" />
+</td>
+</tr>
+</table>
+
+---
+
+<table>
+<tr>
+<td width="50%">
+<video src="./assets/5587257558.mp4" controls autoplay loop muted playsinline width="100%"></video>
+</td>
+<td width="50%">
+<img src="./assets/demo_vstar_5587257558.gif" width="100%" />
+</td>
+</tr>
+</table>
+
+---
+
+<table>
+<tr>
+<td width="50%">
+<video src="./assets/5804131706.mp4" controls autoplay loop muted playsinline width="100%"></video>
+</td>
+<td width="50%">
+<img src="./assets/demo_vstar_5804131706.gif" width="100%" />
+</td>
+</tr>
+</table>
+
+---
+
+<table>
+<tr>
+<td width="50%">
+<video src="./assets/3846475848.mp4" controls autoplay loop muted playsinline width="100%"></video>
+</td>
+<td width="50%">
+<img src="./assets/demo_vstar_3846475848.gif" width="100%" />
+</td>
+</tr>
+</table>
+
+---
+
+<table>
+<tr>
+<td width="50%">
+<video src="./assets/8183771503.mp4" controls autoplay loop muted playsinline width="100%"></video>
+</td>
+<td width="50%">
+<img src="./assets/demo_vstar_8183771503.gif" width="100%" />
+</td>
+</tr>
+</table>
+
+---
+
+<table>
+<tr>
+<td width="50%">
+<video src="./assets/tNQo2GTbP6s.mp4" controls autoplay loop muted playsinline width="100%"></video>
+</td>
+<td width="50%">
+<img src="./assets/demo_mme_tNQo2GTbP6s.gif" width="100%" />
+</td>
+</tr>
+</table>
 
 
 # License
