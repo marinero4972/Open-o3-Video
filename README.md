@@ -56,7 +56,7 @@ bash setup.sh
 
 To provide unified spatio-temporal supervision for grounded video reasoning, we build two datasets: STGR-CoT-30k for supervised fine-tuning and STGR-RL-36k for reinforcement learning. 
 
-Json data download link: [STGR](https://huggingface.co/datasets/marinero4972/Open-o3-Video/tree/main)
+Json data download link and video source data download instructions: [STGR](https://huggingface.co/datasets/marinero4972/Open-o3-Video)
 
 The overall data structure should be:
 ```sh
