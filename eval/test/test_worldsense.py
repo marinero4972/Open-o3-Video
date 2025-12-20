@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="/path/to/your/model",
+        default=os.getenv("EVAL_MODEL_PATH", os.getenv("MODEL_PATH", "/path/to/your/model")),
         help="Path to the model.",
     )
     parser.add_argument(

@@ -1,8 +1,10 @@
 #!/bin/bash
-# You should refine the model_path, exp_name and llm_name(for vstar evaluation) here.
-MODEL_PATH="/path/to/model/Open-o3-Video/"
-LLM_PATH="Qwen/Qwen2.5-72B-Instruct"
-EXP_NAME="open-o3-video"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/config/run_config.sh"
+
+MODEL_PATH="${EVAL_MODEL_PATH}"
+EXP_NAME="${EVAL_EXP_NAME}"
 
 # for v-star
 mkdir -p ./logs/vstar_logs
@@ -54,6 +56,4 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python ./test/eval_vstar.py \
 #     --N 1 \
 #     --vote 'majority_voting' \
 #     --think_mode > "./logs/videommmu_logs/${EXP_NAME}_videommmu.log" 2>&1
-
-
 

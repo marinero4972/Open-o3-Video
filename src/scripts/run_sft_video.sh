@@ -1,11 +1,14 @@
-cd src/r1-v
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/config/run_config.sh"
+
+cd "${REPO_ROOT}/src/r1-v"
 export DEBUG_MODE="true" # Enable Debug if you want to see the rollout of model during RL
 export WANDB_MODE="offline"
 
-# You should refine the model_path and exp_name here.
-MODEL_PATH="/path/to/Qwen2.5-VL-7B-Instruct"
-EXP_NAME="sft"
-OUT_DIR="/path/to/ckpts/${EXP_NAME}"
+MODEL_PATH="${SFT_MODEL_PATH}"
+EXP_NAME="${SFT_EXP_NAME}"
+OUT_DIR="${SFT_OUT_DIR}"
 
 DATA_ROOT=$(python -c "from configs.data_root import DATA_ROOT; print(DATA_ROOT)")
 # mkdir -p ./train_logs

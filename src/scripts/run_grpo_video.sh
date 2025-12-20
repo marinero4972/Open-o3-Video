@@ -1,9 +1,12 @@
-cd src/r1-v
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+source "${REPO_ROOT}/config/run_config.sh"
 
-# You should refine the model_path and exp_name here.
-MODEL_PATH="/path/to/ckpts/sft/"
-EXP_NAME="rl"
-OUT_DIR="/path/to/ckpts/${EXP_NAME}"
+cd "${REPO_ROOT}/src/r1-v"
+
+MODEL_PATH="${GRPO_MODEL_PATH}"
+EXP_NAME="${GRPO_EXP_NAME}"
+OUT_DIR="${GRPO_OUT_DIR}"
 
 DATA_ROOT=$(python -c "from configs.data_root import DATA_ROOT; print(DATA_ROOT)")
 # mkdir -p ./train_logs

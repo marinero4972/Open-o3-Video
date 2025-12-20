@@ -10,7 +10,7 @@ import os
 parser = argparse.ArgumentParser(description="Process video data with a specified model.")
 parser.add_argument('--result_file', type=str, default="none.json", 
                     help='Path to save the output result JSON file.')
-parser.add_argument('--model_path', type=str, default="/path/to/Qwen2.5-72B-Instruct", 
+parser.add_argument('--model_path', type=str, default=os.getenv("LLM_PATH", "/path/to/Qwen2.5-72B-Instruct"), 
                     help='Path to save the output result JSON file.')
 args = parser.parse_args()
 
