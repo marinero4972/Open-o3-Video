@@ -32,6 +32,7 @@ from transformers import (
     BitsAndBytesConfig,
     Qwen2VLProcessor,
     Qwen2VLForConditionalGeneration,
+    Qwen3VLForConditionalGeneration,
     Qwen2_5_VLForConditionalGeneration
 )
 from trl import (
@@ -454,6 +455,8 @@ if __name__ == "__main__":
         model = Qwen2VLForConditionalGeneration.from_pretrained(model_config.model_name_or_path, **model_kwargs)
     elif "Qwen2.5-VL" in model_config.model_name_or_path:
         model = Qwen2_5_VLForConditionalGeneration.from_pretrained(model_config.model_name_or_path, **model_kwargs)
+    elif "Qwen3-VL" in model_config.model_name_or_path:
+        model = Qwen3VLForConditionalGeneration.from_pretrained(model_config.model_name_or_path, **model_kwargs)
     else:
         model = AutoModelForVision2Seq.from_pretrained(model_config.model_name_or_path, **model_kwargs)
 
