@@ -5,7 +5,7 @@
 SFT_MODEL_PATH="Qwen/Qwen3-VL-2B-Instruct"
 GRPO_MODEL_PATH="/path/to/ckpts/sft/"
 EVAL_MODEL_PATH="${GRPO_MODEL_PATH}"
-LLM_PATH="Qwen/Qwen3-8B-Instruct" # Text-only LLM for V-STAR grading
+LLM_PATH="Qwen/Qwen3-8B" # Text-only LLM for V-STAR grading
 
 SFT_EXP_NAME="sft"
 SFT_OUT_DIR="/path/to/ckpts/${SFT_EXP_NAME}"

@@ -13,6 +13,7 @@ class QwenVL_VLLM:
 
         self.video_max_pixels = llm_args.pop("video_max_pixels", 360 * 420)
         self.video_max_frames = llm_args.pop("video_max_frames", 16)
+        gpu_memory_utilization = llm_args.pop("gpu_memory_utilization", 0.95)
         print("Start initialize the model.")
 
         self.llm = LLM(
@@ -21,7 +22,7 @@ class QwenVL_VLLM:
             tensor_parallel_size=1,
             dtype="bfloat16",
             max_num_seqs=5,
-            gpu_memory_utilization=0.8,
+            gpu_memory_utilization=gpu_memory_utilization,
             **llm_args,
         )
         sampling_params = SamplingParams(

@@ -4,6 +4,7 @@ from vllm import LLM, SamplingParams
 from transformers import AutoProcessor, AutoTokenizer
 from qwen_vl_utils import process_vision_info
 
+
 # Set model path
 model_path = os.getenv("MODEL_PATH", "...")
 
@@ -15,9 +16,10 @@ question_list = ["What is the color of the bowling ball?", "What is the first sc
 llm = LLM(
     model=model_path,
     tensor_parallel_size=1,
-    max_model_len=81920,
-    gpu_memory_utilization=0.7,
+    max_model_len = 32768,  # statt 81920
+    gpu_memory_utilization = 0.85,  # höherer Speicheranteil für KV-Cache
     limit_mm_per_prompt={"video": 1, "image": 16},
+    enforce_eager=True,
 )
 
 sampling_params = SamplingParams(
@@ -33,7 +35,7 @@ processor = AutoProcessor.from_pretrained(model_path)
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 tokenizer.padding_side = "left"
 processor.tokenizer = tokenizer
-system_message = "A conversation between user and assistant. The user provides a video and asks a question, and the Assistant solves it. The assistant MUST first think about the reasoning process in the mind and then provide the user with the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively. All reasoning must be grounded in visual evidence from the video. When you mention any related object, person, or specific visual element in the reasoning process, you must strictly follow the following format: `<obj>object_name</obj><box>bounding_box</box>at<t>time_in_seconds</t>s`. The answer part only requires a text response; tags like <obj>, <box>, <t> are not needed.",
+system_message = "A conversation between user and assistant. The user provides a video and asks a question, and the Assistant solves it. The assistant MUST first think about the reasoning process in the mind and then provide the user with the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively. All reasoning must be grounded in visual evidence from the video. When you mention any related object, person, or specific visual element in the reasoning process, you must strictly follow the following format: `<obj>object_name</obj><box>bounding_box</box>at<t>time_in_seconds</t>s`. The answer part only requires a text response; tags like <obj>, <box>, <t> are not needed."
 
 for idx in range(len(question_list)):
     question = question_list[idx]

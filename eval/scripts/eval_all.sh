@@ -6,12 +6,14 @@ source "${REPO_ROOT}/config/run_config.sh"
 MODEL_PATH="${EVAL_MODEL_PATH}"
 EXP_NAME="${EVAL_EXP_NAME}"
 
+export PYTHONPATH="$(cd "$(dirname "$0")/.." && pwd)"
+
 # for v-star
 mkdir -p ./logs/vstar_logs
 MODEL_KWARGS="./config/vstar.yaml"
-NUM_GPUS=8 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python ./test/test_vstar_multi_images.py \
-    --video_folder "/mnt/bn/zilongdata-us/xiangtai/project/video-rl-jh/datasets/V-STaR/videos/" \
-    --anno_file "/mnt/bn/zilongdata-us/xiangtai/project/video-rl-jh/datasets/V-STaR/V_STaR_test.json" \
+NUM_GPUS=4 CUDA_VISIBLE_DEVICES=0,1,2,3 python ./test/test_vstar_multi_images.py \
+    --video_folder "/hkfs/home/project/hk-project-p0024638/uzivy/datasets/v-star/videos/" \
+    --anno_file "/hkfs/home/project/hk-project-p0024638/uzivy/datasets/v-star/V_STaR_test.json" \
     --result_file "./logs/vstar_logs/${EXP_NAME}_vstar.json" \
     --model_path $MODEL_PATH \
     --model_kwargs $MODEL_KWARGS \

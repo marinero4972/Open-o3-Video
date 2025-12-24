@@ -455,6 +455,7 @@ def build_model(
     max_tokens,
     video_max_pixels,
     video_max_frames,
+    **kwargs,
 ):
     from models.model_vllm import QwenVL_VLLM
 
@@ -465,6 +466,7 @@ def build_model(
         max_tokens=max_tokens,
         video_max_pixels=video_max_pixels,
         video_max_frames=video_max_frames,
+        **kwargs,
     )
 
     return model
