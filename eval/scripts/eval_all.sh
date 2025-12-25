@@ -12,8 +12,8 @@ export PYTHONPATH="$(cd "$(dirname "$0")/.." && pwd)"
 mkdir -p ./logs/vstar_logs
 MODEL_KWARGS="./config/vstar.yaml"
 NUM_GPUS=4 CUDA_VISIBLE_DEVICES=0,1,2,3 python ./test/test_vstar_multi_images.py \
-    --video_folder "/hkfs/home/project/hk-project-p0024638/uzivy/datasets/v-star/videos/" \
-    --anno_file "/hkfs/home/project/hk-project-p0024638/uzivy/datasets/v-star/V_STaR_test.json" \
+    --video_folder "/hkfs/work/workspace/scratch/uzivy-open-o3-data/eval/v-star/videos/" \
+    --anno_file "/hkfs/work/workspace/scratch/uzivy-open-o3-data/eval/v-star/V_STaR_test.json" \
     --result_file "./logs/vstar_logs/${EXP_NAME}_vstar.json" \
     --model_path $MODEL_PATH \
     --model_kwargs $MODEL_KWARGS \

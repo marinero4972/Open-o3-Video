@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=sft_video
-#SBATCH --output=logs/slurm_sft_%j.log
-#SBATCH --error=logs/slurm_sft_%j.err
+#SBATCH --output=/hkfs/home/project/hk-project-p0024638/uzivy/Bachelor-thesis/src/scripts/logs/latest.log
+#SBATCH --error=/hkfs/home/project/hk-project-p0024638/uzivy/Bachelor-thesis/src/scripts/logs/latest.err
 #SBATCH --account=hk-project-p0024638
 #SBATCH --partition=accelerated
 #SBATCH --gres=gpu:4
@@ -43,9 +43,6 @@ mkdir -p "$TORCHINDUCTOR_CACHE_DIR" "$TRITON_CACHE_DIR" "$VLLM_CACHE_DIR"
 
 # Change directory to REPO_ROOT for running the script
 cd "$REPO_ROOT"
-
-# Create logs directory if it doesn't exist
-mkdir -p src/scripts/logs
 
 # Run the SFT script
 echo "Starting SFT training..."

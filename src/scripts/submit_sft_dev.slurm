@@ -1,28 +1,26 @@
 #!/bin/bash
-#SBATCH --job-name=eval_vstar
-#SBATCH --output=/hkfs/home/project/hk-project-p0024638/uzivy/Bachelor-thesis/eval/logs/latest.log
-#SBATCH --error=/hkfs/home/project/hk-project-p0024638/uzivy/Bachelor-thesis/eval/logs/latest.err
+#SBATCH --job-name=sft_video_dev
+#SBATCH --output=/hkfs/home/project/hk-project-p0024638/uzivy/Bachelor-thesis/src/scripts/logs/latest_dev.log
+#SBATCH --error=/hkfs/home/project/hk-project-p0024638/uzivy/Bachelor-thesis/src/scripts/logs/latest_dev.err
 #SBATCH --account=hk-project-p0024638
-#SBATCH --partition=accelerated
+#SBATCH --partition=dev_accelerated
 #SBATCH --gres=gpu:4
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=76
-#SBATCH --time=04:00:00
+#SBATCH --time=01:00:00
 #SBATCH --mem=240G
 
 # --- Setup Environment ---
 set -e  # Exit on error
 
-# Set explicit paths to avoid Slurm spool directory issues
+# Set explicit paths
 REPO_ROOT="/hkfs/home/project/hk-project-p0024638/uzivy/Bachelor-thesis"
-SCRIPT_DIR="${REPO_ROOT}/eval/scripts"
-EVAL_ROOT="${REPO_ROOT}/eval"
+SCRIPT_DIR="${REPO_ROOT}/src/scripts"
 
 echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURMD_NODENAME"
 echo "Repo Root: $REPO_ROOT"
-echo "Eval Root: $EVAL_ROOT"
 
 # Activate Virtual Environment
 if [ -f "${REPO_ROOT}/.venv/bin/activate" ]; then
@@ -33,27 +31,21 @@ else
     exit 1
 fi
 
-# Source global config
-source "${REPO_ROOT}/config/run_config.sh"
-
 # --- Fix Permission/Cache Issues ---
 export TORCHINDUCTOR_CACHE_DIR="${HOME}/.cache/torch_inductor_cache"
 export TRITON_CACHE_DIR="${HOME}/.cache/triton_cache"
 export VLLM_CACHE_DIR="${HOME}/.cache/vllm"
 export VLLM_NO_USAGE_STATS=1
 
-# Nuke ALL possible cache locations (including defaults) to remove stale scratch paths
+# Clean up cache
 rm -rf "$TORCHINDUCTOR_CACHE_DIR" "$TRITON_CACHE_DIR" "$VLLM_CACHE_DIR"
-rm -rf "${HOME}/.cache/torch" "${HOME}/.triton"
-
 mkdir -p "$TORCHINDUCTOR_CACHE_DIR" "$TRITON_CACHE_DIR" "$VLLM_CACHE_DIR"
 
-# Change directory to Bachelor-thesis/eval so that "./test/..." paths in eval_all.sh work
-cd "$EVAL_ROOT"
-mkdir -p logs/vstar_logs
+# Change directory to REPO_ROOT for running the script
+cd "$REPO_ROOT"
 
-# Run the evaluation script
-echo "Starting evaluation..."
-bash "${SCRIPT_DIR}/eval_all.sh"
+# Run the SFT script
+echo "Starting SFT training on DEV..."
+bash "${SCRIPT_DIR}/run_sft_video.sh"
 
-echo "Evaluation finished."
+echo "SFT training finished."
