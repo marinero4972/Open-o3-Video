@@ -5,7 +5,7 @@
 
 # --- Data Configuration ---
 # TODO: Ensure dataset is downloaded to this location
-export DATA_ROOT="/hkfs/work/workspace/scratch/uzivy-open-o3-data"
+export DATA_ROOT="/hkfs/work/workspace/scratch/uzivy-open-o3-data/sft_rl"
 
 # --- Model Configuration ---
 SFT_MODEL_PATH="/hkfs/home/project/hk-project-p0024638/uzivy/.cache/huggingface/hub/models--Qwen--Qwen3-VL-2B-Instruct/snapshots/89644892e4d85e24eaac8bacfd4f463576704203"

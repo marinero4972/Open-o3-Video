@@ -24,6 +24,7 @@ import os
 import json
 import random
 import requests
+import sys
 import torch
 from datasets import load_dataset
 from transformers import (
@@ -47,12 +48,27 @@ from trl import (
 from accelerate import Accelerator
 from src.open_r1.vision_process import process_vision_info
 
-from datasets import Dataset, DatasetDict
+from datasets import Dataset, DatasetDict, Features, Sequence, Value
 
 import wandb
 from PIL import Image
 import numpy as np
 from typing import List, Dict, Any
+import copy
+
+def ensure_media_types(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            for item in content:
+                if not isinstance(item, dict):
+                    continue
+                if not item.get("type"):
+                    if item.get("image") or item.get("image_url"):
+                        item["type"] = "image"
+                    elif item.get("video"):
+                        item["type"] = "video"
+    return messages
 
 def prepare_dataset(example: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
     """Prepare dataset example for training."""
@@ -84,6 +100,7 @@ def prepare_dataset(example: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
                 "content": [{"type": "text", "text": "<think>" + example["reasoning_process"] + "</think>\n<answer>" + example["answer"]+"</answer>"}]
             }
         ]
+        messages = ensure_media_types(messages)
         return {"messages": messages, "image_size": example["image_size"], "task": "visual QA", "source": example["source"], "key_frames":[]}
     
     elif example['task'] == 'temporal-spatial free-form QA':
@@ -115,6 +132,7 @@ def prepare_dataset(example: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
                 "content": [{"type": "text", "text": "<think>" + example["reasoning_process"] + "</think>\n<answer>" + example["answer"]+"</answer>"}]
             }
         ]    
+        messages = ensure_media_types(messages)
         return {"messages": messages, "key_frames": example["key_frames"], "task": "temporal-spatial free-form QA", "source": example["source"], "image_size":[]}
     
     elif example['task'] == 'temporal QA':
@@ -144,6 +162,7 @@ def prepare_dataset(example: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
                 "content": [{"type": "text", "text": "<think>" + example["reasoning_process"] + "</think>\n<answer>" + example["answer"]+"</answer>"}]
             }
         ]
+        messages = ensure_media_types(messages)
         return {"messages": messages, "task": "temporal QA", "source": example["source"], "key_frames":[], "image_size":[]}
     elif example["task"] == "General video QA MCQ":
         system_message = "A conversation between user and assistant. The user provides a video and asks a multiple-choice question, and the Assistant solves it. The assistant MUST first think about the reasoning process in the mind and then provide the user with the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively. Only output the correct option in the <answer> </answer> section."
@@ -172,6 +191,7 @@ def prepare_dataset(example: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
                 "content": [{"type": "text", "text": "<think>" + example["reasoning_process"] + "</think>\n<answer>" + example["answer"]+"</answer>"}]
             }
         ]
+        messages = ensure_media_types(messages)
         return {"messages": messages, "task": "General video QA MCQ", "source": example["source"], "key_frames":[], "image_size":[]}
     elif example["task"] == "General video QA Free-form":
         system_message = "A conversation between user and assistant. The user provides a video and asks a question, and the Assistant solves it. The assistant MUST first think about the reasoning process in the mind and then provide the user with the answer. The reasoning process and answer are enclosed within <think> </think> and <answer> </answer> tags, respectively."
@@ -200,6 +220,7 @@ def prepare_dataset(example: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
                 "content": [{"type": "text", "text": "<think>" + example["reasoning_process"] + "</think>\n<answer>" + example["answer"]+"</answer>"}]
             }
         ]
+        messages = ensure_media_types(messages)
         return {"messages": messages, "task": "General video QA Free-form", "source": example["source"], "key_frames":[], "image_size":[]}
     
     raise ValueError(f"Unknown task: {example['task']}")
@@ -279,14 +300,71 @@ def replace_boxes_for_gemini_data(text, image_size):
     
     return pattern.sub(replacer, text)
 
+def _get_media_paths(messages: List[Dict[str, Any]]) -> List[str]:
+    paths = []
+    for msg in messages:
+        for item in msg.get("content", []):
+            if item.get("type") == "image" and "image" in item:
+                paths.append(item["image"])
+            if item.get("type") == "video" and "video" in item:
+                paths.append(item["video"])
+    return paths
+
+def _count_media_tokens(text: str) -> Dict[str, int]:
+    return {
+        "image": text.count("<image>"),
+        "video": text.count("<video>"),
+    }
+
+def _sanitize_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    cleaned = copy.deepcopy(messages)
+    for message in cleaned:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for item in content:
+            if not isinstance(item, dict):
+                continue
+            for key in list(item.keys()):
+                if item[key] is None:
+                    del item[key]
+    return cleaned
+
+def _inject_media_tokens(messages: List[Dict[str, Any]], image_tokens: int, video_tokens: int) -> List[Dict[str, Any]]:
+    injected = copy.deepcopy(messages)
+    for message in injected:
+        if message.get("role") != "user":
+            continue
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        tokens = []
+        if image_tokens > 0:
+            tokens.append({"type": "text", "text": "<image>"})
+        if video_tokens > 0:
+            tokens.append({"type": "text", "text": "<video>"})
+        if tokens:
+            message["content"] = tokens + content
+        break
+    return injected
+
+def _ensure_video_pad(text: str) -> str:
+    pad = "<|vision_start|><|video_pad|><|vision_end|>"
+    if pad in text:
+        return text
+    return f"{pad}\n{text}"
+
 def collate_fn(examples: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
     """Collate batch of examples for training."""
     texts = []
+    sanitized_messages = None
 
     for i, example in enumerate(examples):
         try:
-            texts.append(processor.apply_chat_template(example["messages"], tokenize=False))
-            image_inputs, video_inputs, video_kwargs = process_vision_info(example["messages"], return_video_kwargs=True)
+            sanitized_messages = _sanitize_messages(example["messages"])
+            text = processor.apply_chat_template(sanitized_messages, tokenize=False)
+            texts.append(text)
+            image_inputs, video_inputs, video_kwargs = process_vision_info(sanitized_messages, return_video_kwargs=True)
             
         except Exception as e:
             raise ValueError(f"Failed to process example {i}: {e}")
@@ -299,16 +377,33 @@ def collate_fn(examples: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
         new_image_size = [image_inputs[0].size[0], image_inputs[0].size[1]] # W * H
         texts[0] = resize_bounding_boxes_for_image(texts[0], old_image_size, new_image_size)
 
-        inputs = processor(
-            text=texts,
-            images=image_inputs,
-            videos=None,
-            return_tensors="pt",
-            padding=True
-        )
+        try:
+            media_tokens = _count_media_tokens(texts[0])
+            if image_inputs and media_tokens["image"] == 0:
+                injected = _inject_media_tokens(sanitized_messages, image_tokens=1, video_tokens=0)
+                texts[0] = processor.apply_chat_template(injected, tokenize=False)
+            inputs = processor(
+                text=texts,
+                images=image_inputs,
+                videos=None,
+                return_tensors="pt",
+                padding=True
+            )
+        except Exception:
+            media_paths = _get_media_paths(example.get("messages", []))
+            media_tokens = _count_media_tokens(texts[0])
+            print(
+                f"[collate_fn] processor failed task={example.get('task')} "
+                f"source={example.get('source')} media_paths={media_paths} "
+                f"image_size={getattr(image_inputs[0], 'size', None)} "
+                f"image_inputs={len(image_inputs) if image_inputs else 0} "
+                f"video_inputs={len(video_inputs) if video_inputs else 0} "
+                f"media_tokens={media_tokens}",
+                file=sys.stderr,
+            )
+            raise
         
     elif example["task"] == "temporal-spatial free-form QA":
-
         width, height = video_inputs[0].size(3), video_inputs[0].size(2)
         image_size = (width, height)
 
@@ -349,18 +444,28 @@ def collate_fn(examples: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
             frame_idx += 1
 
         refined_image_inputs = torch.stack(refined_image_inputs)
+        texts[0] = _ensure_video_pad(texts[0])
         texts[0] = texts[0].replace("<|vision_start|><|video_pad|><|vision_end|>", frame_prompt)
         texts[0] = replace_boxes_for_gemini_data(texts[0], image_size)
         # print(refined_image_inputs.shape, texts[0])
 
-        inputs = processor(
-            text=texts,
-            images=[refined_image_inputs],   # (16+k)*3*h*w
-            videos=None,
-            return_tensors="pt",
-            padding=True,
-            do_resize=False
-        )
+        try:
+            inputs = processor(
+                text=texts,
+                images=[refined_image_inputs],   # (16+k)*3*h*w
+                videos=None,
+                return_tensors="pt",
+                padding=True
+            )
+        except Exception:
+            media_paths = _get_media_paths(example.get("messages", []))
+            print(
+                f"[collate_fn] processor failed task={example.get('task')} "
+                f"source={example.get('source')} media_paths={media_paths} "
+                f"video_shape={getattr(video_inputs[0], 'shape', None)}",
+                file=sys.stderr,
+            )
+            raise
 
     elif example["task"] == "temporal QA" or "General video QA" in example["task"]:
         frame_prompt = ""
@@ -370,18 +475,28 @@ def collate_fn(examples: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
             frame_prompt += f"Frame {ori_idx + 1} at {time_now}: <|vision_start|><|image_pad|><|vision_end|>\n"    
             ori_idx += 1
         frame_prompt += f"The video is in total {int(video_inputs[0].size(0) / video_kwargs['fps'][0])} seconds.\n"
+        texts[0] = _ensure_video_pad(texts[0])
         texts[0] = texts[0].replace("<|vision_start|><|video_pad|><|vision_end|>", frame_prompt)
 
         # print(texts[0])
 
-        inputs = processor(
-            text=texts,
-            images=video_inputs,
-            videos=None,
-            return_tensors="pt",
-            padding=True,
-            do_resize=False
-        )
+        try:
+            inputs = processor(
+                text=texts,
+                images=video_inputs,
+                videos=None,
+                return_tensors="pt",
+                padding=True
+            )
+        except Exception:
+            media_paths = _get_media_paths(example.get("messages", []))
+            print(
+                f"[collate_fn] processor failed task={example.get('task')} "
+                f"source={example.get('source')} media_paths={media_paths} "
+                f"video_shape={getattr(video_inputs[0], 'shape', None)}",
+                file=sys.stderr,
+            )
+            raise
     else:
         raise ValueError(f"Unknown task: {example['task']}")
 
@@ -445,6 +560,7 @@ if __name__ == "__main__":
     model_kwargs = dict(
         revision=model_config.model_revision,
         trust_remote_code=model_config.trust_remote_code,
+        attn_implementation=model_config.attn_implementation,
         torch_dtype=torch_dtype,
         device_map=get_kbit_device_map(),
         # quantization_config=bnb_config,
@@ -466,8 +582,40 @@ if __name__ == "__main__":
     )
 
     # Prepare dataset
-    from tqdm import tqdm 
-    prepared_dataset = [prepare_dataset(example) for example in tqdm(dataset['train'], desc="Preparing dataset")]
+    prepared_features = Features(
+        {
+            "messages": [
+                {
+                    "role": Value("string"),
+                    "content": [
+                        {
+                            "type": Value("string"),
+                            "text": Value("string"),
+                            "image": Value("string"),
+                            "video": Value("string"),
+                        }
+                    ],
+                }
+            ],
+            "image_size": [Value("int64")],
+            "key_frames": [
+                {
+                    "idx": Value("int64"),
+                    "path": Value("string"),
+                    "time": Value("float64"),
+                }
+            ],
+            "task": Value("string"),
+            "source": Value("string"),
+        }
+    )
+    prepared_dataset = dataset["train"].map(
+        prepare_dataset,
+        num_proc=16,
+        remove_columns=dataset["train"].column_names,
+        desc="Preparing dataset",
+        features=prepared_features,
+    )
 
     # Initialize wandb if specified
     if training_args.report_to == "wandb":

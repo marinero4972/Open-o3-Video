@@ -341,12 +341,9 @@ def extract_vision_info(conversations: list[dict] | list[list[dict]]) -> list[di
         for message in conversation:
             if isinstance(message["content"], list):
                 for ele in message["content"]:
-                    if (
-                        "image" in ele
-                        or "image_url" in ele
-                        or "video" in ele
-                        or ele["type"] in ("image", "image_url", "video")
-                    ):
+                    image_val = ele.get("image") or ele.get("image_url")
+                    video_val = ele.get("video")
+                    if image_val or video_val:
                         vision_infos.append(ele)
     return vision_infos
 
@@ -362,9 +359,11 @@ def process_vision_info(
     video_inputs = []
     video_sample_fps_list = []
     for vision_info in vision_infos:
-        if "image" in vision_info or "image_url" in vision_info:
+        image_val = vision_info.get("image") or vision_info.get("image_url")
+        video_val = vision_info.get("video")
+        if image_val:
             image_inputs.append(fetch_image(vision_info))
-        elif "video" in vision_info:
+        elif video_val:
             video_input, video_sample_fps = fetch_video(vision_info, return_video_sample_fps=True)
             video_sample_fps_list.append(video_sample_fps)
             video_inputs.append(video_input)

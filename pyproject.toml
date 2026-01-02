@@ -8,6 +8,7 @@ dependencies = [
     "accelerate>=1.10.1",
     "decord>=0.6.0",
     "deepspeed>=0.18.3",
+    "flash-attn>=2.8.3",
     "nltk>=3.9.2",
     "openpyxl>=3.1.5",
     "pysubs2>=1.8.0",
@@ -23,3 +24,6 @@ dependencies = [
     "wheel>=0.45.1",
     "xlsxwriter>=3.2.9",
 ]
+
+[tool.uv.extra-build-dependencies]
+flash-attn = ["torch", "packaging", "ninja", "setuptools"]
