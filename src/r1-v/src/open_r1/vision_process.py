@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import math
 import os
@@ -9,6 +10,7 @@ import time
 import warnings
 from functools import lru_cache
 from io import BytesIO
+from pathlib import Path
 
 import requests
 import torch
@@ -19,8 +21,74 @@ from torchvision import io, transforms
 from torchvision.transforms import InterpolationMode
 from typing import Optional
 
-
 logger = logging.getLogger(__name__)
+
+# ============== VIDEO CACHING CONFIGURATION ==============
+# Persistent cache on workspace (survives between jobs)
+VIDEO_CACHE_DIR = os.environ.get(
+    "VIDEO_CACHE_DIR",
+    "/hkfs/work/workspace/scratch/uzivy-open-o3-data/video_cache"
+)
+VIDEO_CACHE_ENABLED = os.environ.get("VIDEO_CACHE_ENABLED", "1") == "1"
+VIDEO_CACHE_JPEG_QUALITY = int(os.environ.get("VIDEO_CACHE_JPEG_QUALITY", "85"))
+
+# Create cache directory if caching is enabled
+if VIDEO_CACHE_ENABLED:
+    os.makedirs(VIDEO_CACHE_DIR, exist_ok=True)
+
+
+def _get_cache_path(video_path: str, ele: dict) -> str:
+    """Generate a unique cache path for a video based on its path and config."""
+    # Include relevant config in hash to handle different sampling params
+    config_str = f"{ele.get('nframes', '')}{ele.get('fps', '')}{ele.get('min_frames', '')}{ele.get('max_frames', '')}"
+    hash_input = f"{video_path}:{config_str}"
+    hash_id = hashlib.md5(hash_input.encode()).hexdigest()[:16]
+    # Use video filename + hash for easier debugging
+    video_name = Path(video_path).stem
+    return os.path.join(VIDEO_CACHE_DIR, f"{video_name}_{hash_id}.cache")
+
+
+def _save_video_cache(cache_path: str, video: torch.Tensor, sample_fps: float):
+    """Save video frames as compressed JPEGs to cache."""
+    try:
+        frames_data = []
+        for frame in video:  # video shape: (T, C, H, W)
+            # Convert to PIL Image
+            frame_np = frame.permute(1, 2, 0).numpy().astype('uint8')
+            img = Image.fromarray(frame_np)
+            # Compress to JPEG
+            buf = BytesIO()
+            img.save(buf, format='JPEG', quality=VIDEO_CACHE_JPEG_QUALITY)
+            frames_data.append(buf.getvalue())
+
+        cache_data = {
+            'frames': frames_data,
+            'sample_fps': sample_fps,
+            'shape': list(video.shape),
+        }
+        torch.save(cache_data, cache_path)
+        logger.info(f"Cached video to {cache_path} ({len(frames_data)} frames, {os.path.getsize(cache_path) / 1024:.1f} KB)")
+    except Exception as e:
+        logger.warning(f"Failed to save cache {cache_path}: {e}")
+
+
+def _load_video_cache(cache_path: str) -> tuple[torch.Tensor, float] | None:
+    """Load video frames from compressed cache."""
+    try:
+        cache_data = torch.load(cache_path, weights_only=False)
+        frames = []
+        for jpg_bytes in cache_data['frames']:
+            img = Image.open(BytesIO(jpg_bytes))
+            frame = torch.tensor(list(img.getdata()), dtype=torch.uint8)
+            frame = frame.reshape(img.height, img.width, 3).permute(2, 0, 1)
+            frames.append(frame)
+        video = torch.stack(frames)
+        return video, cache_data['sample_fps']
+    except Exception as e:
+        logger.warning(f"Failed to load cache {cache_path}: {e}")
+        return None
+# ============== END VIDEO CACHING ==============
+
 
 IMAGE_FACTOR = 28
 MIN_PIXELS = 4 * 28 * 28
@@ -276,14 +344,86 @@ def get_video_reader_backend() -> str:
     return video_reader_backend
 
 
+def _load_image_sequence_from_dir(dir_path: str, ele: dict) -> tuple[torch.Tensor, float]:
+    """Load image sequence from a directory as a video tensor."""
+    import glob
+    import re
+
+    # Try common frame naming patterns
+    patterns = ["im_*.jpg", "im_*.png", "frame_*.jpg", "frame_*.png", "*.jpg", "*.png"]
+    image_files = []
+
+    for pattern in patterns:
+        image_files = glob.glob(os.path.join(dir_path, pattern))
+        if image_files:
+            break
+
+    if not image_files:
+        raise ValueError(f"No image files found in directory: {dir_path}")
+
+    # Sort numerically by extracting number from filename
+    def extract_number(path):
+        basename = os.path.basename(path)
+        numbers = re.findall(r'\d+', basename)
+        return int(numbers[-1]) if numbers else 0
+
+    image_files = sorted(image_files, key=extract_number)
+
+    total_frames = len(image_files)
+    # Assume default FPS for image sequences (configurable via ele)
+    video_fps = ele.get("source_fps", 10.0)
+
+    # Calculate number of frames to sample using smart_nframes logic
+    nframes = smart_nframes(ele, total_frames=total_frames, video_fps=video_fps)
+
+    # Sample frames uniformly
+    idx = torch.linspace(0, total_frames - 1, nframes).round().long().tolist()
+    sampled_files = [image_files[i] for i in idx]
+
+    # Load images and stack into tensor (T, C, H, W)
+    frames = []
+    for img_path in sampled_files:
+        img = Image.open(img_path).convert("RGB")
+        frame = torch.tensor(list(img.getdata()), dtype=torch.uint8)
+        frame = frame.reshape(img.height, img.width, 3).permute(2, 0, 1)
+        frames.append(frame)
+
+    video = torch.stack(frames)
+    sample_fps = nframes / max(total_frames, 1e-6) * video_fps
+
+    return video, sample_fps
+
+
 def fetch_video(ele: dict, image_factor: int = IMAGE_FACTOR, return_video_sample_fps: bool = False) -> torch.Tensor | list[Image.Image]:
     if isinstance(ele["video"], str):
-        video_reader_backend = get_video_reader_backend()
-        try:
-            video, sample_fps = VIDEO_READER_BACKENDS[video_reader_backend](ele)
-        except Exception as e:
-            logger.warning(f"video_reader_backend {video_reader_backend} error, use torchvision as default, msg: {e}")
-            video, sample_fps = VIDEO_READER_BACKENDS["torchvision"](ele)
+        video_path = ele["video"]
+        is_directory = os.path.isdir(video_path)
+        cache_path = _get_cache_path(video_path, ele) if VIDEO_CACHE_ENABLED else None
+
+        # Try loading from cache first
+        cached_result = None
+        if cache_path and os.path.exists(cache_path):
+            cached_result = _load_video_cache(cache_path)
+
+        if cached_result is not None:
+            video, sample_fps = cached_result
+            logger.info(f"Loaded video from cache: {cache_path}")
+        else:
+            if is_directory:
+                # Load from image sequence directory
+                video, sample_fps = _load_image_sequence_from_dir(video_path, ele)
+            else:
+                # Decode video (slow path)
+                video_reader_backend = get_video_reader_backend()
+                try:
+                    video, sample_fps = VIDEO_READER_BACKENDS[video_reader_backend](ele)
+                except Exception as e:
+                    logger.warning(f"video_reader_backend {video_reader_backend} error, use torchvision as default, msg: {e}")
+                    video, sample_fps = VIDEO_READER_BACKENDS["torchvision"](ele)
+
+            # Save to cache for next time (before resize, after frame sampling)
+            if cache_path:
+                _save_video_cache(cache_path, video, sample_fps)
 
         nframes, _, height, width = video.shape
         min_pixels = ele.get("min_pixels", VIDEO_MIN_PIXELS)

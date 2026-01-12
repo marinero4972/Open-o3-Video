@@ -1,4 +1,5 @@
 import os
+import time
 os.environ["WANDB_MODE"] = "offline" 
 
 import os
@@ -356,149 +357,138 @@ def _ensure_video_pad(text: str) -> str:
 
 def collate_fn(examples: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
     """Collate batch of examples for training."""
+    debug_pipeline = os.getenv("DEBUG_DATA_PIPELINE") == "1"
+    if debug_pipeline and not hasattr(collate_fn, "_debug_counter"):
+        collate_fn._debug_counter = 0
     texts = []
-    sanitized_messages = None
+    batch_images = []
+    example_times = []
 
+    batch_start = time.perf_counter() if debug_pipeline else None
     for i, example in enumerate(examples):
+        example_start = time.perf_counter() if debug_pipeline else None
         try:
             sanitized_messages = _sanitize_messages(example["messages"])
             text = processor.apply_chat_template(sanitized_messages, tokenize=False)
-            texts.append(text)
             image_inputs, video_inputs, video_kwargs = process_vision_info(sanitized_messages, return_video_kwargs=True)
-            
         except Exception as e:
             raise ValueError(f"Failed to process example {i}: {e}")
-        
-    # batch size must be 1
-    assert len(texts) == 1
 
-    if example["task"] == "visual QA":
-        old_image_size = example["image_size"]
-        new_image_size = [image_inputs[0].size[0], image_inputs[0].size[1]] # W * H
-        texts[0] = resize_bounding_boxes_for_image(texts[0], old_image_size, new_image_size)
+        if example["task"] == "visual QA":
+            old_image_size = example["image_size"]
+            new_image_size = [image_inputs[0].size[0], image_inputs[0].size[1]]  # W * H
+            text = resize_bounding_boxes_for_image(text, old_image_size, new_image_size)
 
-        try:
-            media_tokens = _count_media_tokens(texts[0])
+            media_tokens = _count_media_tokens(text)
             if image_inputs and media_tokens["image"] == 0:
                 injected = _inject_media_tokens(sanitized_messages, image_tokens=1, video_tokens=0)
-                texts[0] = processor.apply_chat_template(injected, tokenize=False)
-            inputs = processor(
-                text=texts,
-                images=image_inputs,
-                videos=None,
-                return_tensors="pt",
-                padding=True
-            )
-        except Exception:
-            media_paths = _get_media_paths(example.get("messages", []))
-            media_tokens = _count_media_tokens(texts[0])
-            print(
-                f"[collate_fn] processor failed task={example.get('task')} "
-                f"source={example.get('source')} media_paths={media_paths} "
-                f"image_size={getattr(image_inputs[0], 'size', None)} "
-                f"image_inputs={len(image_inputs) if image_inputs else 0} "
-                f"video_inputs={len(video_inputs) if video_inputs else 0} "
-                f"media_tokens={media_tokens}",
-                file=sys.stderr,
-            )
-            raise
-        
-    elif example["task"] == "temporal-spatial free-form QA":
-        width, height = video_inputs[0].size(3), video_inputs[0].size(2)
-        image_size = (width, height)
+                text = processor.apply_chat_template(injected, tokenize=False)
 
-        # Here, we need to add key frames.
-        key_frame_root = STR_KF_ROOT
-        if example['source'] == "STR_plm_rdcap":
-            key_frame_root = STR_PLM_KF_ROOT
+            batch_images.append([image_inputs[0]])
 
-        key_frames = []
+        elif example["task"] == "temporal-spatial free-form QA":
+            width, height = video_inputs[0].size(3), video_inputs[0].size(2)
+            image_size = (width, height)
 
-        for key_frame in example["key_frames"]:
-            kf_path = os.path.join(key_frame_root, key_frame["path"])
-            kf = Image.open(kf_path)
-            kf = kf.convert('RGB')
-            resized_kf = kf.resize(image_size)
-            resized_kf= np.array(resized_kf)
-            resized_kf = np.transpose(resized_kf, (2, 0, 1))
-            resized_kf = torch.from_numpy(resized_kf)
-            key_frames.append((key_frame["time"], resized_kf))
-        
-        frame_prompt = ""
-        refined_image_inputs = []
-        kf_idx = 0
-        ori_idx = 0
-        frame_idx = 1
-        while ori_idx < len(video_inputs[0]):
-            time_now = int(ori_idx / video_kwargs['fps'][0])
-            if kf_idx < len(key_frames) and time_now >= key_frames[kf_idx][0]:
-                refined_image_inputs.append(key_frames[kf_idx][1])
-                time_now = key_frames[kf_idx][0]
-                frame_prompt += f"Frame {frame_idx} at {time_now}s: <|vision_start|><|image_pad|><|vision_end|>\n"   
-                kf_idx += 1
-            else:
-                refined_image_inputs.append(video_inputs[0][ori_idx])
-                time_now = round(ori_idx / video_kwargs['fps'][0],1)
-                frame_prompt += f"Frame {frame_idx} at {time_now}s: <|vision_start|><|image_pad|><|vision_end|>\n"       
+            # Here, we need to add key frames.
+            key_frame_root = STR_KF_ROOT
+            if example["source"] == "STR_plm_rdcap":
+                key_frame_root = STR_PLM_KF_ROOT
+
+            key_frames = []
+
+            for key_frame in example["key_frames"]:
+                kf_path = os.path.join(key_frame_root, key_frame["path"])
+                kf = Image.open(kf_path)
+                kf = kf.convert("RGB")
+                resized_kf = kf.resize(image_size)
+                resized_kf = np.array(resized_kf)
+                resized_kf = np.transpose(resized_kf, (2, 0, 1))
+                resized_kf = torch.from_numpy(resized_kf)
+                key_frames.append((key_frame["time"], resized_kf))
+
+            frame_prompt = ""
+            refined_image_inputs = []
+            kf_idx = 0
+            ori_idx = 0
+            frame_idx = 1
+            while ori_idx < len(video_inputs[0]):
+                time_now = int(ori_idx / video_kwargs["fps"][0])
+                if kf_idx < len(key_frames) and time_now >= key_frames[kf_idx][0]:
+                    refined_image_inputs.append(key_frames[kf_idx][1])
+                    time_now = key_frames[kf_idx][0]
+                    frame_prompt += (
+                        f"Frame {frame_idx} at {time_now}s: <|vision_start|><|image_pad|><|vision_end|>\n"
+                    )
+                    kf_idx += 1
+                else:
+                    refined_image_inputs.append(video_inputs[0][ori_idx])
+                    time_now = round(ori_idx / video_kwargs["fps"][0], 1)
+                    frame_prompt += (
+                        f"Frame {frame_idx} at {time_now}s: <|vision_start|><|image_pad|><|vision_end|>\n"
+                    )
+                    ori_idx += 1
+                frame_idx += 1
+
+            refined_image_inputs = torch.stack(refined_image_inputs)
+            text = _ensure_video_pad(text)
+            text = text.replace("<|vision_start|><|video_pad|><|vision_end|>", frame_prompt)
+            text = replace_boxes_for_gemini_data(text, image_size)
+
+            batch_images.append(list(refined_image_inputs))
+
+        elif example["task"] == "temporal QA" or "General video QA" in example["task"]:
+            frame_prompt = ""
+            ori_idx = 0
+            while ori_idx < len(video_inputs[0]):
+                time_now = round(ori_idx / video_kwargs["fps"][0], 1)
+                frame_prompt += f"Frame {ori_idx + 1} at {time_now}: <|vision_start|><|image_pad|><|vision_end|>\n"
                 ori_idx += 1
-            frame_idx += 1
+            frame_prompt += f"The video is in total {int(video_inputs[0].size(0) / video_kwargs['fps'][0])} seconds.\n"
+            text = _ensure_video_pad(text)
+            text = text.replace("<|vision_start|><|video_pad|><|vision_end|>", frame_prompt)
 
-        refined_image_inputs = torch.stack(refined_image_inputs)
-        texts[0] = _ensure_video_pad(texts[0])
-        texts[0] = texts[0].replace("<|vision_start|><|video_pad|><|vision_end|>", frame_prompt)
-        texts[0] = replace_boxes_for_gemini_data(texts[0], image_size)
-        # print(refined_image_inputs.shape, texts[0])
+            batch_images.append(list(video_inputs[0]))
+        else:
+            raise ValueError(f"Unknown task: {example['task']}")
 
-        try:
-            inputs = processor(
-                text=texts,
-                images=[refined_image_inputs],   # (16+k)*3*h*w
-                videos=None,
-                return_tensors="pt",
-                padding=True
-            )
-        except Exception:
-            media_paths = _get_media_paths(example.get("messages", []))
-            print(
-                f"[collate_fn] processor failed task={example.get('task')} "
-                f"source={example.get('source')} media_paths={media_paths} "
-                f"video_shape={getattr(video_inputs[0], 'shape', None)}",
-                file=sys.stderr,
-            )
-            raise
+        texts.append(text)
+        if debug_pipeline:
+            example_times.append(time.perf_counter() - example_start)
 
-    elif example["task"] == "temporal QA" or "General video QA" in example["task"]:
-        frame_prompt = ""
-        ori_idx = 0
-        while ori_idx < len(video_inputs[0]):
-            time_now = round(ori_idx / video_kwargs['fps'][0], 1)
-            frame_prompt += f"Frame {ori_idx + 1} at {time_now}: <|vision_start|><|image_pad|><|vision_end|>\n"    
-            ori_idx += 1
-        frame_prompt += f"The video is in total {int(video_inputs[0].size(0) / video_kwargs['fps'][0])} seconds.\n"
-        texts[0] = _ensure_video_pad(texts[0])
-        texts[0] = texts[0].replace("<|vision_start|><|video_pad|><|vision_end|>", frame_prompt)
-
-        # print(texts[0])
-
-        try:
-            inputs = processor(
-                text=texts,
-                images=video_inputs,
-                videos=None,
-                return_tensors="pt",
-                padding=True
-            )
-        except Exception:
-            media_paths = _get_media_paths(example.get("messages", []))
-            print(
-                f"[collate_fn] processor failed task={example.get('task')} "
-                f"source={example.get('source')} media_paths={media_paths} "
-                f"video_shape={getattr(video_inputs[0], 'shape', None)}",
-                file=sys.stderr,
-            )
-            raise
-    else:
-        raise ValueError(f"Unknown task: {example['task']}")
+    processor_start = time.perf_counter() if debug_pipeline else None
+    try:
+        inputs = processor(
+            text=texts,
+            images=batch_images,
+            videos=None,
+            return_tensors="pt",
+            padding=True,
+        )
+    except Exception:
+        batch_tasks = [ex.get("task") for ex in examples]
+        print(f"[collate_fn] processor failed batch_tasks={batch_tasks}", file=sys.stderr)
+        raise
+    finally:
+        if debug_pipeline:
+            collate_fn._debug_counter += 1
+            should_log = collate_fn._debug_counter <= 5 or collate_fn._debug_counter % 50 == 0
+            if should_log:
+                total_time = time.perf_counter() - batch_start
+                processor_time = time.perf_counter() - processor_start
+                batch_tasks = [ex.get("task") for ex in examples]
+                batch_image_counts = [len(images) for images in batch_images]
+                avg_example = sum(example_times) / max(len(example_times), 1)
+                print(
+                    "[collate_fn] timing "
+                    f"batch={collate_fn._debug_counter} "
+                    f"total_s={total_time:.3f} "
+                    f"processor_s={processor_time:.3f} "
+                    f"avg_example_s={avg_example:.3f} "
+                    f"tasks={batch_tasks} "
+                    f"images_per_sample={batch_image_counts}",
+                    file=sys.stderr,
+                )
 
     labels = inputs["input_ids"].clone()
     labels[labels == processor.tokenizer.pad_token_id] = -100
@@ -631,7 +621,7 @@ if __name__ == "__main__":
     )
 
     # Train model
-    trainer.train()
+    trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
 
     # Save final model
 
