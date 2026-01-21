@@ -7,3 +7,4 @@
 **/__pycache__/
 src/r1-v/wandb/
 .DS_Store
+**/logs/

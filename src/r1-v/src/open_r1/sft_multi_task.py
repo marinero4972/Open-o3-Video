@@ -701,12 +701,6 @@ if __name__ == "__main__":
     # Apply LinearPatchEmbed optimization for Qwen3-VL if enabled
     _replace_conv3d_with_linear_patch_embed(model)
 
-    # Ensure flash attention is used
-    if hasattr(model.config, "_attn_implementation"):
-        model.config._attn_implementation = "flash_attention_2"
-    if hasattr(model.config, "attn_implementation"):
-        model.config.attn_implementation = "flash_attention_2"
-
     processor = AutoProcessor.from_pretrained(
         model_config.model_name_or_path,
         trust_remote_code=model_config.trust_remote_code

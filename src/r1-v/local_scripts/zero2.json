@@ -21,6 +21,7 @@
     },
     "zero_optimization": {
         "stage": 2,
+        "ignore_unused_parameters": true,
         "offload_optimizer": {
             "device": "none",
             "pin_memory": true
