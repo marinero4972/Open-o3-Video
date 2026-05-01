@@ -34,6 +34,8 @@ Stage 2: Reinforcement learning with Group Sequence Policy Optimization stabiliz
 
 # Updates
 
+- 2026.05.01, Open-o3-Video is accepted by ICML 2026!!!
+
 - 2025.11, Improved Results with Qwen3-VL-8B: We have trained Open-o3 Video using **Qwen3-VL-8B** as the base model. On the **V-STAR benchmark**, our latest model achieves: **mAM:35.5% and mLGM: 49.0%**. This result establishes a new state-of-the-art in spatio-temporal grounded video reasoning.
 
 - 2025.11, Media Coverage: Our work was recently featured by **量子位(QbitAI)**. 👉 [Read the article here](https://mp.weixin.qq.com/s/ssdSYXxi8RAOuIVW33lWIg)
