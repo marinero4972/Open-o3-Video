@@ -15,7 +15,7 @@ and
 [Zhuochen Wang](https://scholar.google.com/citations?hl=en&user=RDvwXDsAAAAJ),
 
 
-[[📖 Paper](https://arxiv.org/pdf/2510.20579)] | [[🌟 Project Page](https://marinero4972.github.io/projects/Open-o3-Video/)] | [[🎥 Introduction](https://youtu.be/gymaTVRy0JY)] | [[🤗 Model](https://huggingface.co/marinero4972/Open-o3-Video/tree/main)] | [[🤗 Data](https://huggingface.co/datasets/marinero4972/Open-o3-Video/tree/main)]
+[[📖 Paper](https://arxiv.org/pdf/2510.20579)] | [[🌟 Project Page](https://marinero4972.github.io/projects/Open-o3-Video/)] | [[🎥 Introduction](https://youtu.be/gymaTVRy0JY)] | [[🤗 Model](https://huggingface.co/marinero4972/Open-o3-Video/tree/main)] | [[🤗 Data](https://huggingface.co/datasets/marinero4972/Open-o3-Video/tree/main)] | [[Open-o3-Video-v2](https://github.com/Multimedia-Semantic-Analytics-Lab/Open-o3-Video-v2)]
 
 
 **TL; DR**: Open-o3 Video integrates explicit spatio-temporal evidence (key timestamps and bounding boxes) into video reasoning through curated STGR dataset and a two-stage SFT–RL training strategy, achieving state-of-the-art results on V-STAR and delivering verifiable, reliable reasoning for video understanding.
@@ -33,6 +33,8 @@ Stage 2: Reinforcement learning with Group Sequence Policy Optimization stabiliz
 ![](./assets/model.png)
 
 # Updates
+
+- 2026.10.14, We release [Open-o3-Video-v2](https://msalab-pku.github.io/projects/Open-o3-Video-v2/)! 
 
 - 2026.05.01, Open-o3-Video is accepted by ICML 2026!!!
 
